@@ -5,24 +5,27 @@ DROP PROCEDURE IF EXISTS ComputeAverageScoreForUser;
 DELIMITER $$
 
 -- Create the procedure
-CREATE PROCEDURE ComputeAverageScoreForUser(
-    IN p_user_id INT
-)
+CREATE PROCEDURE ComputeAverageScoreForUser (user_id INT)
 BEGIN
-    DECLARE avg_score DECIMAL(10, 2);
+    -- Declare variables to store total score and number of projects
+    DECLARE total_score INT DEFAULT 0;
+    DECLARE projects_count INT DEFAULT 0;
 
-    -- Compute the average score
-    SELECT AVG(score) INTO avg_score
+    -- Calculate the total score for the user
+    SELECT SUM(score) INTO total_score
     FROM corrections
-    WHERE user_id = p_user_id;
+    WHERE corrections.user_id = user_id;
 
-    -- Update or insert into the average_scores table
-    -- Assuming average_scores table exists with columns (user_id, average_score)
-    -- Replace with your actual table name and column names if different
-    INSERT INTO average_scores (user_id, average_score)
-    VALUES (p_user_id, avg_score)
-    ON DUPLICATE KEY UPDATE average_score = avg_score;
+    -- Calculate the number of projects for the user
+    SELECT COUNT(*) INTO projects_count
+    FROM corrections
+    WHERE corrections.user_id = user_id;
 
+    -- Update the average_score for the user in the users table
+    -- If projects_count is 0, set average_score to 0 to avoid division by zero
+    UPDATE users
+    SET users.average_score = IF(projects_count = 0, 0, total_score / projects_count)
+    WHERE users.id = user_id;
 END $$
 
 -- Reset the delimiter to default

@@ -1,3 +1,6 @@
+-- Drop stored procedure if it has already exists
+DROP PROCEDURE IF EXISTS ComputeAverageWeightedScoreForUser;
+
 -- Change the delimiter to $$
 DELIMITER $$
 

@@ -5,17 +5,18 @@ DROP FUNCTION IF EXISTS SafeDiv;
 DELIMITER $$
 
 -- Create the function
-CREATE FUNCTION SafeDiv(a INT, b INT)
-RETURNS DECIMAL(10,2)
+CREATE FUNCTION SafeDiv (a INT, b INT)
+RETURNS FLOAT DETERMINISTIC
 BEGIN
-    DECLARE result DECIMAL(10,2);
-    
-    IF b = 0 THEN
-        SET result = 0;
-    ELSE
+    -- Declare and initialize result variable
+    DECLARE result FLOAT DEFAULT 0;
+
+    -- Check if b is not zero, then perform division
+    IF b != 0 THEN
         SET result = a / b;
     END IF;
-    
+
+    -- Return the result of the division or 0 if b is 0
     RETURN result;
 END $$
 

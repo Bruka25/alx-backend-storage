@@ -1,5 +1,2 @@
-// list_databases.js
-print("Databases:");
-db.adminCommand('listDatabases').databases.forEach(function(d) {
-    print("- " + d.name);
-});
+// lists all mongodb databases
+show dbs;

@@ -9,6 +9,7 @@ import pymongo
 def print_nginx_logs(nginx_collection):
     '''Prints stats about Nginx request logs.'''
     print(f'{nginx_collection.count_documents({})} logs')
+    print(f'Methods:')
     methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
     for method in methods:
         req_count = len(list(nginx_collection.find({'method': method})))

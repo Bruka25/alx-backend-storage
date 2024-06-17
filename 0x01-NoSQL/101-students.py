@@ -3,7 +3,7 @@
 """Module for returning all students sorted by average score"""
 
 
-def top_scorers(mongo_collection):
+def top_students(mongo_collection):
     '''Prints all students in a collection sorted by average score.'''
     students = mongo_collection.aggregate(
         [

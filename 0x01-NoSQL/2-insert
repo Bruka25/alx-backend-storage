@@ -1,0 +1,2 @@
+// insert_school_document.js
+db.school.insert({name: "Holberton school"});

@@ -4,39 +4,101 @@
 
 import redis
 import uuid
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Any
 import functools
+
 
 def count_calls(method: Callable) -> Callable:
     """
-    Decorator that counts the number of times a method is called.
+    Decorator that tracks the number of calls made to a method
+    in a Cache class.
 
     Args:
         method (Callable): The method to be decorated.
 
     Returns:
-        Callable: The wrapped method.
+        Callable: The wrapped method with call count tracking.
     """
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
         """
-        Wrapper function that increments the call count and calls the original method.
+        Invokes the given method after incrementing its call counter.
 
         Args:
             *args: Positional arguments to pass to the original method.
             **kwargs: Keyword arguments to pass to the original method.
 
         Returns:
-            The return value of the original method.
+            Any: The return value of the original method.
         """
-        # Use the method's qualified name as the key
-        key = f"{method.__qualname__}"
-        # Increment the count for this key
-        self._redis.incr(key)
-        # Call the original method
+        if isinstance(self._redis, redis.Redis):
+            self._redis.incr(method.__qualname__)
         return method(self, *args, **kwargs)
+    return invoker
 
-    return wrapper
+
+def call_history(method: Callable) -> Callable:
+    """
+    Decorator that tracks the call details of a method in a Cache class.
+
+    Args:
+        method (Callable): The method to be decorated.
+
+    Returns:
+        Callable: The wrapped method with call history tracking.
+    """
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
+        """
+        Returns the method's output after storing its inputs and output.
+
+        Args:
+            *args: Positional arguments to pass to the original method.
+            **kwargs: Keyword arguments to pass to the original method.
+
+        Returns:
+            Any: The return value of the original method.
+        """
+        in_key = f"{method.__qualname__}:inputs"
+        out_key = f"{method.__qualname__}:outputs"
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(in_key, str(args))
+        output = method(self, *args, **kwargs)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(out_key, output)
+        return output
+    return invoker
+
+
+def replay(fn: Callable) -> None:
+    """
+    Displays the call history of a Cache class' method.
+
+    Args:
+        fn (Callable): The method whose history is to be displayed.
+    """
+    if fn is None or not hasattr(fn, '__self__'):
+        return
+    redis_store = getattr(fn.__self__, '_redis', None)
+    if not isinstance(redis_store, redis.Redis):
+        return
+    
+    fxn_name = fn.__qualname__
+    in_key = f"{fxn_name}:inputs"
+    out_key = f"{fxn_name}:outputs"
+    fxn_call_count = 0
+    
+    if redis_store.exists(fxn_name) != 0:
+        fxn_call_count = int(redis_store.get(fxn_name))
+    
+    print(f"{fxn_name} was called {fxn_call_count} times:")
+    
+    fxn_inputs = redis_store.lrange(in_key, 0, -1)
+    fxn_outputs = redis_store.lrange(out_key, 0, -1)
+    
+    for fxn_input, fxn_output in zip(fxn_inputs, fxn_outputs):
+        print(f"{fxn_name}(*{fxn_input.decode('utf-8')}) -> {fxn_output}")
+
 
 class Cache:
     def __init__(self):
